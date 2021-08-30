@@ -243,7 +243,23 @@ public class ConditionGroup
                         }
 
                         List<ConditionBlock> bracketList = blockList.GetRange(bracketL + 1, bracketR - bracketL - 1);
-                        finalResult = finalResult || IsOperateCondition(bracketList, depth + 1, isPrompt);
+
+                        if (currentSymbol != EnumConditionGroupToken.None)
+                        {
+                            switch (currentSymbol)
+                            {
+                                case EnumConditionGroupToken.And:
+                                    finalResult = finalResult && IsOperateCondition(bracketList, depth + 1, isPrompt);
+                                    break;
+                                case EnumConditionGroupToken.Or:
+                                    finalResult = finalResult || IsOperateCondition(bracketList, depth + 1, isPrompt);
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            finalResult = IsOperateCondition(bracketList, depth + 1, isPrompt);
+                        }
                         i = bracketR;
                         break;
                 }
