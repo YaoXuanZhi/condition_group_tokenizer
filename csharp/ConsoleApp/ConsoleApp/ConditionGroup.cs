@@ -270,6 +270,143 @@ public class ConditionGroup
     }
 
     /// <summary>
+    /// 条件预览
+    /// </summary>
+    /// <param name="blockList"></param>
+    /// <returns></returns>
+    List<bool> ConditionPreviewBak(List<ConditionBlock> blockList, int depth, bool isPrompt)
+    {
+        List<bool> previews = new List<bool>();
+        for (int i = 0; i < blockList.Count; i++)
+        {
+            var block = blockList[i];
+            if (block.depth == depth)
+            {
+                switch (block.token)
+                {
+                    case EnumConditionGroupToken.Content:
+                        previews.Add(ProxyCondition(block.data, isPrompt));
+                        break;
+                    case EnumConditionGroupToken.BracketLeft:
+                        int bracketL = i;
+                        int bracketR = bracketL;
+                        for (; bracketR < blockList.Count; bracketR++)
+                        {
+                            var temp = blockList[bracketR];
+                            if (temp.token == EnumConditionGroupToken.BracketRight && temp.depth == depth)
+                                break;
+                        }
+                        List<ConditionBlock> bracketList = blockList.GetRange(bracketL + 1, bracketR - bracketL - 1);
+                        previews.Add(IsOperateCondition(bracketList, depth + 1, isPrompt));
+                        i = bracketR;
+                        break;
+                }
+            }
+        }
+
+        return previews;
+    }
+
+    /// <summary>
+    /// 逻辑运算条件组
+    /// </summary>
+    public enum EnumBooleanCmd
+    {
+        ///<summary>或运算</summary>
+        Or,
+
+        ///<summary>且运算</summary>
+        And,
+
+        ///<summary>结果</summary>
+        Result,
+    };
+
+
+    class BooleanBlock
+    {
+        public EnumBooleanCmd token;
+        public bool result = false;
+    }
+
+    /// <summary>
+    /// 条件预览
+    /// </summary>
+    /// <param name="blockList"></param>
+    /// <returns></returns>
+    List<bool> ConditionPreview(List<ConditionBlock> blockList, int depth, bool isPrompt)
+    {
+        List<BooleanBlock> previews = new List<BooleanBlock>();
+        for (int i = 0; i < blockList.Count; i++)
+        {
+            var block = blockList[i];
+            if (block.depth == depth)
+            {
+                switch (block.token)
+                {
+                    case EnumConditionGroupToken.And:
+                        previews.Add(new BooleanBlock()
+                        {
+                            token = EnumBooleanCmd.And,
+                        });
+                        break;
+                    case EnumConditionGroupToken.Or:
+                        previews.Add(new BooleanBlock()
+                        {
+                            token = EnumBooleanCmd.Or,
+                        });
+                        break;
+                    case EnumConditionGroupToken.Content:
+                        previews.Add(new BooleanBlock()
+                        {
+                            token = EnumBooleanCmd.Result,
+                            result = ProxyCondition(block.data, isPrompt),
+                        });
+                        break;
+                    case EnumConditionGroupToken.BracketLeft:
+                        int bracketL = i;
+                        int bracketR = bracketL;
+                        for (; bracketR < blockList.Count; bracketR++)
+                        {
+                            var temp = blockList[bracketR];
+                            if (temp.token == EnumConditionGroupToken.BracketRight && temp.depth == depth)
+                                break;
+                        }
+                        List<ConditionBlock> bracketList = blockList.GetRange(bracketL + 1, bracketR - bracketL - 1);
+                        previews.Add(new BooleanBlock()
+                        {
+                            token = EnumBooleanCmd.Result,
+                            result = IsOperateCondition(bracketList, depth + 1, isPrompt),
+                        });
+                        i = bracketR;
+                        break;
+                }
+            }
+        }
+
+        List<bool> result = new List<bool>();
+        bool finalResult = false;
+        for (int i = 0; i < previews.Count; i++)
+        {
+            if (previews[i].token == EnumBooleanCmd.And)
+            {
+                finalResult = finalResult && previews[i + 1].result;
+            }
+            else if (previews[i].token == EnumBooleanCmd.Or)
+            {
+                finalResult = finalResult || previews[i + 1].result;
+            }
+            else
+            {
+                result.Add(previews[i].result);
+            }
+        }
+
+        return result;
+    }
+
+
+    /// <summary>
     /// 判断是否满足条件组
     /// </summary>
     /// <param name="callback"></param>
