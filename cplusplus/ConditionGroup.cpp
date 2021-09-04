@@ -1,52 +1,54 @@
-//
-// Created by yaoxu on 2021/8/23.
-//
-
 #include "ConditionGroup.h"
 
-void ConditionGroup::BracketMatch(const std::string &source, int &i) {
-    int matchTimes = 0;
-    unsigned int length = source.length();
-    for (; i < length; i++) {
-        char ch = source[i];
-        switch (ch) {
-            case '(':
-                matchTimes++;
-                break;
-            case ')':
-                matchTimes--;
-                if (matchTimes == 0) return;
-                break;
-            default:
-                break;
-        }
-    }
+bool ConditionGroup::IsIgnoreChar(char ch) {
+    return ch == ' ' || ch == '\n';
 }
 
-void ConditionGroup::GenerateConditionGroup(const std::string & source, std::vector<ConditionBlock> &blockList, int depth)
+void ConditionGroup::ParseConditionGroup(const std::string & source, std::vector<ConditionBlock> &blockList, int depth)
 {
     EnumConditionGroupToken oldToken = EnumConditionGroupToken::None;
     EnumConditionGroupToken newToken = oldToken;
     unsigned int length = source.length();
     std::string temp;
+    int bracketMatchTimes = 0;
     for (int i = 0; i < length; i++)
     {
         char ch = source[i];
 
         // 忽略字符
-        if (IsIgnoreChar(ch))
+        if (IsIgnoreChar(ch) && bracketMatchTimes == 0)
         {
             newToken = EnumConditionGroupToken::None;
         }
         else if (ch == '(')
         {
-            newToken = EnumConditionGroupToken::BracketLeft;
+            if (bracketMatchTimes == 0)
+            {
+                newToken = EnumConditionGroupToken::BracketLeft;
+            }
+            else
+            {
+                newToken = EnumConditionGroupToken::Content;
+            }
+            bracketMatchTimes++;
         }
-        else if (ch == '&')
+        else if (ch == ')' && bracketMatchTimes > 0)
+        {
+            bracketMatchTimes--;
+            if (bracketMatchTimes == 0)
+            {
+                newToken = EnumConditionGroupToken::BracketRight;
+            }
+            else
+            {
+                newToken = EnumConditionGroupToken::Content;
+            }
+        }
+        else if (ch == '&' && bracketMatchTimes == 0)
         {
             newToken = EnumConditionGroupToken::And;
         }
-        else if (ch == '|')
+        else if (ch == '|' && bracketMatchTimes == 0)
         {
             newToken = EnumConditionGroupToken::Or;
         }
@@ -59,50 +61,27 @@ void ConditionGroup::GenerateConditionGroup(const std::string & source, std::vec
         {
             if (temp.length() > 0)
             {
-                ConditionBlock obj;
-                obj.token = oldToken;
-                obj.data = temp;
-                obj.depth = depth;
-                blockList.push_back(obj);
+                // 小括号模块则递归判断
+                if (oldToken == EnumConditionGroupToken::Content && newToken == EnumConditionGroupToken::BracketRight)
+                {
+                    ParseConditionGroup(temp, blockList, depth + 1);
+                }
+                else {
+                    ConditionBlock obj;
+                    obj.token = oldToken;
+                    obj.data = temp;
+                    obj.depth = depth;
+                    blockList.push_back(obj);
+                }
+
                 temp = "";
             }
 
             oldToken = newToken;
         }
 
-        switch (newToken) {
-            case EnumConditionGroupToken::BracketLeft: {
-                int bracketL = i;
-                int bracketR = i;
-                BracketMatch(source, bracketR);
-
-                if (bracketL < bracketR) {
-                    ConditionBlock objL;
-                    objL.token = EnumConditionGroupToken::BracketLeft;
-                    objL.data = "(";
-                    objL.depth = depth;
-                    blockList.push_back(objL);
-
-                    std::string str = source.substr(bracketL + 1, bracketR - bracketL - 1);
-                    GenerateConditionGroup(str, blockList, depth + 1);
-
-                    ConditionBlock objR;
-                    objR.token = EnumConditionGroupToken::BracketRight;
-                    objR.data = ")";
-                    objR.depth = depth;
-                    blockList.push_back(objR);
-
-                    i = bracketR;
-                    temp = "";
-                }
-            }
-            break;
-            default: {
-                if (newToken != EnumConditionGroupToken::None)
-                    temp += ch;
-            }
-            break;
-        }
+        if (newToken != EnumConditionGroupToken::None)
+            temp += ch;
     }
 
     if (temp.length() > 0)
@@ -129,11 +108,9 @@ bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
             return false;
         else
             return  true;
-        // return Convert.ToBoolean(str);
-        // return Convert.ToBoolean(source);
     }
 
-    bool ConditionGroup::IsOperateCondition(const std::vector<ConditionBlock> &blockList, int depth, bool isPrompt) {
+    bool ConditionGroup::RunConditionExpression(const std::vector<ConditionBlock> &blockList, int depth, bool isPrompt) {
     bool finalResult = false;
     EnumConditionGroupToken currentSymbol = EnumConditionGroupToken::None;
     for (int i = 0; i < blockList.size(); i++) {
@@ -141,44 +118,57 @@ bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
         if (block.depth == depth) {
             switch (block.token) {
                 case EnumConditionGroupToken::And:
-                    case EnumConditionGroupToken::Or:
-                        currentSymbol = block.token;
-                        break;
-                        case EnumConditionGroupToken::Content:
-                        {
-                            if (currentSymbol != EnumConditionGroupToken::None) {
-                                switch (currentSymbol) {
-                                    case EnumConditionGroupToken::And:
-                                        finalResult = finalResult && ProxyCondition(block.data, isPrompt);
-                                        break;
-                                        case EnumConditionGroupToken::Or:
-                                            finalResult = finalResult || ProxyCondition(block.data, isPrompt);
-                                            break;
-                                            default:
-                                                break;
-                                }
-                            } else {
-                                finalResult = ProxyCondition(block.data, isPrompt);
-                            }
+                case EnumConditionGroupToken::Or:
+                    currentSymbol = block.token;
+                    break;
+                case EnumConditionGroupToken::Content: {
+                    if (currentSymbol != EnumConditionGroupToken::None) {
+                        switch (currentSymbol) {
+                            case EnumConditionGroupToken::And:
+                                finalResult = finalResult && ProxyCondition(block.data, isPrompt);
+                                break;
+                            case EnumConditionGroupToken::Or:
+                                finalResult = finalResult || ProxyCondition(block.data, isPrompt);
+                                break;
+                            default:
+                                break;
                         }
-                        break;
-                        case EnumConditionGroupToken::BracketLeft:
-                        {
-                            int bracketL = i;
-                            int bracketR = bracketL;
-                            for (; bracketR < blockList.size(); bracketR++) {
-                                const ConditionBlock &temp = blockList[bracketR];
-                                if (temp.token == EnumConditionGroupToken::BracketRight && temp.depth == depth)
-                                    break;
-                            }
-
-                            std::vector<ConditionBlock> bracketList(blockList.begin() + (bracketL + 1), blockList.begin() + bracketR);
-                            finalResult = finalResult || IsOperateCondition(bracketList, depth + 1, isPrompt);
-                            i = bracketR;
-                        }
-                        break;
-                        default:
+                    } else {
+                        finalResult = ProxyCondition(block.data, isPrompt);
+                    }
+                }
+                    break;
+                case EnumConditionGroupToken::BracketLeft: {
+                    int bracketL = i;
+                    int bracketR = bracketL;
+                    for (; bracketR < blockList.size(); bracketR++) {
+                        const ConditionBlock &temp = blockList[bracketR];
+                        if (temp.token == EnumConditionGroupToken::BracketRight && temp.depth == depth)
                             break;
+                    }
+
+                    std::vector<ConditionBlock> bracketList(blockList.begin() + (bracketL + 1),
+                                                            blockList.begin() + bracketR);
+                    if (currentSymbol != EnumConditionGroupToken::None)
+                    {
+                        switch (currentSymbol) {
+                            case EnumConditionGroupToken::And:
+                                finalResult = finalResult && RunConditionExpression(bracketList, depth + 1, isPrompt);
+                                break;
+                            case EnumConditionGroupToken::Or:
+                                finalResult = finalResult || RunConditionExpression(bracketList, depth + 1, isPrompt);
+                                break;
+                            default:
+                                break;
+                        }
+                    }else{
+                        finalResult = RunConditionExpression(bracketList, depth + 1, isPrompt);
+                    }
+                    i = bracketR;
+                }
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -186,31 +176,153 @@ bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
     return finalResult;
 }
 
-bool ConditionGroup::IsMatchConditionGroup(bool isPrompt) {
+bool ConditionGroup::RunConditionExpression(bool isPrompt) {
     if (!conditionBlocks.empty())
     {
-        return IsOperateCondition(conditionBlocks, 0, isPrompt);
+        return RunConditionExpression(conditionBlocks, 0, isPrompt);
     }
 
     return true;
 }
 
-bool ConditionGroup::Check(const std::string& source, bool isPrompt) {
+bool ConditionGroup::Check(const std::string& source) {
     conditionBlocks.clear();
     conditionHashSet.clear();
-    GenerateConditionGroup(source, conditionBlocks);
-
-    for (auto pos = conditionBlocks.begin(); pos != conditionBlocks.end(); ++pos)
+    ParseConditionGroup(source, conditionBlocks);
+    for (std::vector<ConditionBlock>::iterator pos = conditionBlocks.begin(); pos != conditionBlocks.end(); ++pos)
     {
         if (pos->token == EnumConditionGroupToken::Content)
             conditionHashSet.insert(pos->data);
     }
 
-    bool result = IsMatchConditionGroup(isPrompt);
-    printf("%s =====> %d\n", source.c_str(), result);
-    return result;
+    return RunConditionExpression(true);
 }
 
-bool ConditionGroup::IsIgnoreChar(char ch) {
-    return ch == ' ' || ch == '\n';
+bool ConditionGroup::DirectCheck(const std::string &source) {
+    return DirectCheckConditionGroup(source);
+}
+
+bool ConditionGroup::DirectCheckConditionGroup(const std::string &source, int depth)
+{
+    std::vector<ConditionBlock> result;
+    EnumConditionGroupToken oldToken = EnumConditionGroupToken::None;
+    EnumConditionGroupToken newToken = oldToken;
+    unsigned int lenght = source.length();
+    std::string temp;
+    int bracketMatchTimes = 0;
+    for (int i = 0; i < lenght; i++)
+    {
+        char ch = source[i];
+
+        // 忽略字符
+        if (IsIgnoreChar(ch) && bracketMatchTimes == 0)
+        {
+            newToken = EnumConditionGroupToken::None;
+        }
+        else if (ch == '(')
+        {
+            if (bracketMatchTimes == 0)
+            {
+                newToken = EnumConditionGroupToken::BracketLeft;
+            }
+            else
+            {
+                newToken = EnumConditionGroupToken::BracketContent;
+            }
+            bracketMatchTimes++;
+        }
+        else if (ch == ')' && bracketMatchTimes > 0)
+        {
+            bracketMatchTimes--;
+            if (bracketMatchTimes == 0)
+            {
+                newToken = EnumConditionGroupToken::BracketRight;
+            }
+            else
+            {
+                newToken = EnumConditionGroupToken::BracketContent;
+            }
+        }
+        else if (ch == '&' && bracketMatchTimes == 0)
+        {
+            newToken = EnumConditionGroupToken::And;
+        }
+        else if (ch == '|' && bracketMatchTimes == 0)
+        {
+            newToken = EnumConditionGroupToken::Or;
+        }
+        else if (bracketMatchTimes > 0)
+        {
+            newToken = EnumConditionGroupToken::BracketContent;
+        }
+        else
+        {
+            newToken = EnumConditionGroupToken::Content;
+        }
+
+        if (oldToken != newToken)
+        {
+            if (temp.length() > 0)
+            {
+                if (oldToken != EnumConditionGroupToken::BracketLeft && oldToken != EnumConditionGroupToken::BracketRight)
+                {
+                    ConditionBlock obj;
+                    obj.token = oldToken;
+                    obj.data = temp;
+                    obj.depth = depth;
+                    result.push_back(obj);
+                }
+                temp = "";
+            }
+
+            oldToken = newToken;
+        }
+
+        if (newToken != EnumConditionGroupToken::None)
+            temp += ch;
+    }
+
+    if (temp.length() > 0)
+    {
+        if (oldToken == EnumConditionGroupToken::Content)
+        {
+            ConditionBlock obj;
+            obj.token = oldToken;
+            obj.data = temp;
+            obj.depth = depth;
+            result.push_back(obj);
+        }
+    }
+
+    bool finalResult = IsConditionCmd(result[0], depth);
+    for (int i = 0; i < result.size(); i++)
+    {
+        ConditionBlock &cmd = result[i];
+        switch (cmd.token)
+        {
+            case EnumConditionGroupToken::And:
+                finalResult = finalResult && IsConditionCmd(result[i + 1], depth);
+                break;
+            case EnumConditionGroupToken::Or:
+                    finalResult = finalResult || IsConditionCmd(result[i + 1], depth);
+                    break;
+            default:
+                break;
+        }
+    }
+    return finalResult;
+}
+
+bool ConditionGroup::IsConditionCmd(const ConditionBlock &cmd, int depth) {
+    switch (cmd.token)
+    {
+        case EnumConditionGroupToken::Content:
+            return ProxyCondition(cmd.data, true);
+        case EnumConditionGroupToken::BracketContent:
+                return DirectCheckConditionGroup(cmd.data, depth + 1);
+        default:
+            break;
+    }
+
+    return false;
 }
