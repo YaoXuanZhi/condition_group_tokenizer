@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 
-// public delegate bool CheckConditionProxyCallback(string content, bool isPrompt);
-
 public class ConditionGroup
 {
     #region 间接判断
@@ -35,30 +33,6 @@ public class ConditionGroup
         ///<summary>具体条件内容</summary>
         Content,
     };
-
-    /// <summary>
-    /// 计算右侧小括号的索引
-    /// </summary>
-    /// <param name="source"></param>
-    /// <param name="i"></param>
-    void BracketMatch(string source, ref int i)
-    {
-        int matchTimes = 0;
-        for (; i < source.Length; i++)
-        {
-            char ch = source[i];
-            switch (ch)
-            {
-                case '(':
-                    matchTimes++;
-                    break;
-                case ')':
-                    matchTimes--;
-                    if (matchTimes == 0) return;
-                    break;
-            }
-        }
-    }
 
     /// <summary>
     /// 是否忽略该字符
@@ -97,14 +71,14 @@ public class ConditionGroup
     /// <param name="source"></param>
     /// <param name="blockList"></param>
     /// <param name="depth"></param>
-    void GenerateConditionGroup(string source, List<ConditionBlock> blockList, int depth)
+    void ParseConditionGroup(string source, List<ConditionBlock> blockList, int depth)
     {
         EnumConditionGroupToken oldToken = EnumConditionGroupToken.None;
         EnumConditionGroupToken newToken = oldToken;
-        int lenght = source.Length;
+        int length = source.Length;
         string temp = "";
         int bracketMatchTimes = 0;
-        for (int i = 0; i < lenght; i++)
+        for (int i = 0; i < length; i++)
         {
             char ch = source[i];
 
@@ -157,7 +131,7 @@ public class ConditionGroup
                     // 小括号模块则递归判断
                     if (oldToken == EnumConditionGroupToken.Content && newToken == EnumConditionGroupToken.BracketRight)
                     {
-                        GenerateConditionGroup(temp, blockList, depth + 1);
+                        ParseConditionGroup(temp, blockList, depth + 1);
                     }
                     else
                     {
@@ -194,11 +168,11 @@ public class ConditionGroup
     }
 
     /// <summary>
-    /// 逻辑表达式运算
+    /// 运行条件表达式
     /// </summary>
     /// <param name="blockList"></param>
     /// <returns></returns>
-    bool IsOperateCondition(List<ConditionBlock> blockList, int depth, bool isPrompt)
+    bool RunConditionExpression(List<ConditionBlock> blockList, int depth, bool isPrompt)
     {
         bool finalResult = false;
         EnumConditionGroupToken currentSymbol = EnumConditionGroupToken.None;
@@ -249,16 +223,16 @@ public class ConditionGroup
                             switch (currentSymbol)
                             {
                                 case EnumConditionGroupToken.And:
-                                    finalResult = finalResult && IsOperateCondition(bracketList, depth + 1, isPrompt);
+                                    finalResult = finalResult && RunConditionExpression(bracketList, depth + 1, isPrompt);
                                     break;
                                 case EnumConditionGroupToken.Or:
-                                    finalResult = finalResult || IsOperateCondition(bracketList, depth + 1, isPrompt);
+                                    finalResult = finalResult || RunConditionExpression(bracketList, depth + 1, isPrompt);
                                     break;
                             }
                         }
                         else
                         {
-                            finalResult = IsOperateCondition(bracketList, depth + 1, isPrompt);
+                            finalResult = RunConditionExpression(bracketList, depth + 1, isPrompt);
                         }
                         i = bracketR;
                         break;
@@ -270,153 +244,16 @@ public class ConditionGroup
     }
 
     /// <summary>
-    /// 条件预览
-    /// </summary>
-    /// <param name="blockList"></param>
-    /// <returns></returns>
-    List<bool> ConditionPreviewBak(List<ConditionBlock> blockList, int depth, bool isPrompt)
-    {
-        List<bool> previews = new List<bool>();
-        for (int i = 0; i < blockList.Count; i++)
-        {
-            var block = blockList[i];
-            if (block.depth == depth)
-            {
-                switch (block.token)
-                {
-                    case EnumConditionGroupToken.Content:
-                        previews.Add(ProxyCondition(block.data, isPrompt));
-                        break;
-                    case EnumConditionGroupToken.BracketLeft:
-                        int bracketL = i;
-                        int bracketR = bracketL;
-                        for (; bracketR < blockList.Count; bracketR++)
-                        {
-                            var temp = blockList[bracketR];
-                            if (temp.token == EnumConditionGroupToken.BracketRight && temp.depth == depth)
-                                break;
-                        }
-                        List<ConditionBlock> bracketList = blockList.GetRange(bracketL + 1, bracketR - bracketL - 1);
-                        previews.Add(IsOperateCondition(bracketList, depth + 1, isPrompt));
-                        i = bracketR;
-                        break;
-                }
-            }
-        }
-
-        return previews;
-    }
-
-    /// <summary>
-    /// 逻辑运算条件组
-    /// </summary>
-    public enum EnumBooleanCmd
-    {
-        ///<summary>或运算</summary>
-        Or,
-
-        ///<summary>且运算</summary>
-        And,
-
-        ///<summary>结果</summary>
-        Result,
-    };
-
-
-    class BooleanBlock
-    {
-        public EnumBooleanCmd token;
-        public bool result = false;
-    }
-
-    /// <summary>
-    /// 条件预览
-    /// </summary>
-    /// <param name="blockList"></param>
-    /// <returns></returns>
-    List<bool> ConditionPreview(List<ConditionBlock> blockList, int depth, bool isPrompt)
-    {
-        List<BooleanBlock> previews = new List<BooleanBlock>();
-        for (int i = 0; i < blockList.Count; i++)
-        {
-            var block = blockList[i];
-            if (block.depth == depth)
-            {
-                switch (block.token)
-                {
-                    case EnumConditionGroupToken.And:
-                        previews.Add(new BooleanBlock()
-                        {
-                            token = EnumBooleanCmd.And,
-                        });
-                        break;
-                    case EnumConditionGroupToken.Or:
-                        previews.Add(new BooleanBlock()
-                        {
-                            token = EnumBooleanCmd.Or,
-                        });
-                        break;
-                    case EnumConditionGroupToken.Content:
-                        previews.Add(new BooleanBlock()
-                        {
-                            token = EnumBooleanCmd.Result,
-                            result = ProxyCondition(block.data, isPrompt),
-                        });
-                        break;
-                    case EnumConditionGroupToken.BracketLeft:
-                        int bracketL = i;
-                        int bracketR = bracketL;
-                        for (; bracketR < blockList.Count; bracketR++)
-                        {
-                            var temp = blockList[bracketR];
-                            if (temp.token == EnumConditionGroupToken.BracketRight && temp.depth == depth)
-                                break;
-                        }
-                        List<ConditionBlock> bracketList = blockList.GetRange(bracketL + 1, bracketR - bracketL - 1);
-                        previews.Add(new BooleanBlock()
-                        {
-                            token = EnumBooleanCmd.Result,
-                            result = IsOperateCondition(bracketList, depth + 1, isPrompt),
-                        });
-                        i = bracketR;
-                        break;
-                }
-            }
-        }
-
-        List<bool> result = new List<bool>();
-        bool finalResult = false;
-        for (int i = 0; i < previews.Count; i++)
-        {
-            if (previews[i].token == EnumBooleanCmd.And)
-            {
-                finalResult = finalResult && previews[i + 1].result;
-            }
-            else if (previews[i].token == EnumBooleanCmd.Or)
-            {
-                finalResult = finalResult || previews[i + 1].result;
-            }
-            else
-            {
-                result.Add(previews[i].result);
-            }
-        }
-
-        return result;
-    }
-
-
-    /// <summary>
     /// 判断是否满足条件组
     /// </summary>
     /// <param name="callback"></param>
     /// <param name="isPrompt"></param>
     /// <returns></returns>
-    public bool IsMatchConditionGroup(bool isPrompt = false)
+    public bool RunConditionExpression(bool isPrompt = false)
     {
         if (conditionBlocks.Count > 0)
         {
-            return IsOperateCondition(conditionBlocks, 0, isPrompt);
+            return RunConditionExpression(conditionBlocks, 0, isPrompt);
         }
 
         return true;
@@ -432,28 +269,6 @@ public class ConditionGroup
         string str = source.Substring(0, source.Length - 1);
         return Convert.ToBoolean(str);
     }
-
-    /// <summary>
-    /// 采用一个缓存数组来记录条件匹配
-    /// </summary>
-    /// <param name="source"></param>
-    /// <returns></returns>
-    public bool Check(string source)
-    {
-        conditionBlocks.Clear();
-        conditionHashSet.Clear();
-        GenerateConditionGroup(source, conditionBlocks, 0);
-        foreach (var kvp in conditionBlocks)
-        {
-            if (kvp.token == EnumConditionGroupToken.Content)
-                conditionHashSet.Add(kvp.data);
-        }
-
-        bool result = IsMatchConditionGroup(true);
-        Console.WriteLine("{0} =====> {1}", source, result);
-        return result;
-    }
-
     #endregion
 
     #region 直接判断
@@ -582,6 +397,26 @@ public class ConditionGroup
 
         return false;
     }
+    #endregion
+
+    /// <summary>
+    /// 采用一个缓存数组来记录条件匹配
+    /// </summary>
+    /// <param name="source"></param>
+    /// <returns></returns>
+    public bool Check(string source)
+    {
+        conditionBlocks.Clear();
+        conditionHashSet.Clear();
+        ParseConditionGroup(source, conditionBlocks, 0);
+        foreach (var kvp in conditionBlocks)
+        {
+            if (kvp.token == EnumConditionGroupToken.Content)
+                conditionHashSet.Add(kvp.data);
+        }
+
+        return RunConditionExpression(true);
+    }
 
     /// <summary>
     /// 直接判断字符串是否满足条件匹配
@@ -590,10 +425,6 @@ public class ConditionGroup
     /// <returns></returns>
     public bool DirectCheck(string source)
     {
-        bool result = DirectCheckConditionGroup(source);
-        Console.WriteLine("{0} =====> {1}", source, result);
-        return result;
+        return DirectCheckConditionGroup(source);
     }
-
-    #endregion
 }

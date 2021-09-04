@@ -6,7 +6,6 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
             ConditionGroup obj = new ConditionGroup();
 
             // string source = "(((false && true)|| false) && true) && (true || false)";
