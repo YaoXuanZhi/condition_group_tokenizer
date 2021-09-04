@@ -106,7 +106,10 @@ function _M:direct_check_condition_group(source, depth)
 	end
 
 	-- 检测条件是否满足
-	local final_result = self:is_condition_cmd(result[1], depth)
+	local final_result = true
+	if #result > 0 then
+		self:is_condition_cmd(result[1], depth)
+	end
 	for index, value in ipairs(result) do
 		if value.token == EnumConditionGroupToken.And then
 			final_result = final_result and self:is_condition_cmd(result[index+1], depth)
