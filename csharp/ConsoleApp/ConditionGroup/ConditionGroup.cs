@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 public class ConditionGroup
@@ -47,7 +47,7 @@ public class ConditionGroup
     /// <summary>
     /// 条件块
     /// </summary>
-    public class ConditionBlock
+    struct ConditionBlock
     {
         /// <summary>
         /// token类型
