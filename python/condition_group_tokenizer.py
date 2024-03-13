@@ -1,7 +1,7 @@
 from enum import Enum
 
 class EnumConditionGroupToken(Enum):
-    '''条件组词法Token枚举'''
+    '''分词Token枚举'''
     Undefined = "忽略空格、换行符"
     BracketLeft = "左括号"
     BracketRight = "右括号"
@@ -11,32 +11,36 @@ class EnumConditionGroupToken(Enum):
     Content = "具体条件内容"
 
 class ConditionGroupToken():
+    '''分词Token类'''
     def __init__(self, token:EnumConditionGroupToken, source:str, depth:int) -> None:
         self.token = token
         self.source = source
         self.depth = depth
 
-class ConditionGroup():
+class ConditionGroupTokenizer():
+    '''条件组分词器'''
     def isIgnoreChar(self, ch:str) -> bool:
         if ch == ' ' or ch == '\n':
             return True
         return False
 
-    # 测试例子，可以重载该方法
     def proxyCondition(self, source:str, isPromt:bool) -> bool:
+        """
+        测试例子，可以重载该方法
+        """
         temp = source[0:-1]
         if temp == "true":
             return True
         else:
             return False
 
-    def isConditionCmd(self, cmd:ConditionGroupToken, depth:int) -> bool:
+    def isConditionCmd(self, cmd:ConditionGroupToken, depth:int, isPromt:bool) -> bool:
         if cmd.token == EnumConditionGroupToken.Content:
-            return self.proxyCondition(cmd.source, True)
+            return self.proxyCondition(cmd.source, isPromt)
         elif cmd.token == EnumConditionGroupToken.BracketContent:
-            return self.directCheckConditionGroup(cmd.source,   depth + 1)
+            return self.directCheckConditionGroup(cmd.source, depth + 1, isPromt)
 
-    def directCheckConditionGroup(self, source:str, depth:int = 0) -> bool:
+    def directCheckConditionGroup(self, source:str, depth:int = 0, isPromt:bool = False) -> bool:
         result:list[ConditionGroupToken] = []
         oldToken = EnumConditionGroupToken.Undefined
         newToken = oldToken
@@ -86,16 +90,16 @@ class ConditionGroup():
                 result.append(ConditionGroupToken(oldToken, temp, depth))
 
         # 检测条件是否满足
-        finalResult = self.isConditionCmd(result[0], depth)
+        finalResult = self.isConditionCmd(result[0], depth, isPromt)
 
         for i in range(len(result) - 1):
             cmd = result[i]
             if cmd.token == EnumConditionGroupToken.And:
-                finalResult = finalResult and self.isConditionCmd(result[i + 1], depth)
+                finalResult = finalResult and self.isConditionCmd(result[i + 1], depth, isPromt)
             elif cmd.token == EnumConditionGroupToken.Or:
-                finalResult = finalResult or self.isConditionCmd(result[i + 1], depth)
+                finalResult = finalResult or self.isConditionCmd(result[i + 1], depth, isPromt)
 
         return finalResult
 
-    def directCheck(self, source:str) -> bool:
-        return self.directCheckConditionGroup(source)
+    def directCheck(self, source:str, isPromt:bool = False) -> bool:
+        return self.directCheckConditionGroup(source, 0, isPromt)

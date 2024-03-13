@@ -1,9 +1,10 @@
 # coding=utf-8
-from condition_group import ConditionGroup
+from condition_group_tokenizer import ConditionGroupTokenizer
 
-class DemoTest(ConditionGroup):
+class DemoTest(ConditionGroupTokenizer):
     def proxyCondition(self, source: str, isPromt: bool) -> bool:
-        print(f"=====> {source}")
+        if isPromt:
+            print(f"=====> {source}")
         return super().proxyCondition(source, isPromt)
 
 if __name__ == '__main__':
@@ -12,5 +13,5 @@ if __name__ == '__main__':
     # source = "((true1))"
     # source = "((false1))"
     testObj = DemoTest()
-    result = testObj.directCheck(source)
+    result = testObj.directCheck(source, True)
     print(f"判断：{source} 结果为：{result}")
