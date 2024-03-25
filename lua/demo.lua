@@ -1,4 +1,4 @@
-local demo_test = require("condition_group")
+local demo_test = require("condition_group_tokenizer")
 
 function demo_test:proxy_condition(source, isPromt)
 	print(string.format("=====> %s", source))
