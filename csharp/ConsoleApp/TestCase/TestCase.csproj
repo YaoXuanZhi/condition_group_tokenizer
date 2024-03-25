@@ -13,7 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\ConditionGroup\ConditionGroup.csproj" />
+      <ProjectReference Include="..\ConditionGroupTokenizer\ConditionGroupTokenizer.csproj" />
     </ItemGroup>
 
 </Project>

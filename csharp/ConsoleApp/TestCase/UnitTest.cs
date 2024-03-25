@@ -6,12 +6,12 @@ namespace TestCase
 {
     public class Tests
     {
-        ConditionGroup obj;
+        ConditionGroupTokenizer obj;
 
         [SetUp]
         public void Setup()
         {
-            obj = new ConditionGroup();
+            obj = new ConditionGroupTokenizer();
         }
 
         [Test]
@@ -54,7 +54,7 @@ namespace TestCase
             repeatTimes = 100000;
         }
 
-        class MyConditionGroup : ConditionGroup
+        class MyConditionGroupTokenizer : ConditionGroupTokenizer
         {
             protected override bool ProxyCondition(string source, bool isPrompt)
             {
@@ -73,14 +73,14 @@ namespace TestCase
         [Test]
         public void TestDemo1()
         {
-            MyConditionGroup myObj = new MyConditionGroup();
+            MyConditionGroupTokenizer myObj = new MyConditionGroupTokenizer();
             Assert.False(myObj.Check("(((false1-fffff && true1 ===faf)|| false000) && true3333) && (true4 || false5)"));
         }
 
         [Test]
         public void TestDemo2()
         {
-            MyConditionGroup myObj = new MyConditionGroup();
+            MyConditionGroupTokenizer myObj = new MyConditionGroupTokenizer();
             Assert.True(myObj.DirectCheck("(((false1234 || true200)|| false3true) && true4) ||(true5fjfla && false6)"));
         }
 
@@ -100,7 +100,7 @@ namespace TestCase
         [Test]
         public void TestProfileForCheck()
         {
-            MyConditionGroup myObj = new MyConditionGroup();
+            MyConditionGroupTokenizer myObj = new MyConditionGroupTokenizer();
 
 
             CalculateExecuteTime(delegate
@@ -116,7 +116,7 @@ namespace TestCase
         [Test]
         public void TestProfileForDirectCheck()
         {
-            MyConditionGroup myObj = new MyConditionGroup();
+            MyConditionGroupTokenizer myObj = new MyConditionGroupTokenizer();
 
             CalculateExecuteTime(delegate
             {

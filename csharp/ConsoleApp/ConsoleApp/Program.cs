@@ -7,7 +7,7 @@ namespace ConsoleApp
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            ConditionGroup obj = new ConditionGroup();
+            ConditionGroupTokenizer obj = new ConditionGroupTokenizer();
 
             // string source = "(((false && true)|| false) && true) && (true || false)";
             // string source = "(((false1 || true2)|| false3) && true4) ||(true5 && false6)";

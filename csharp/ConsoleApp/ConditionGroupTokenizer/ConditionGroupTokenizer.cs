@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-public class ConditionGroup
+public class ConditionGroupTokenizer
 {
     #region 间接判断
     List<ConditionBlock> conditionBlocks = new List<ConditionBlock>();
