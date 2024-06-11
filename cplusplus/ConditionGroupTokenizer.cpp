@@ -1,10 +1,10 @@
-#include "ConditionGroup.h"
+#include "ConditionGroupTokenizer.h"
 
-bool ConditionGroup::IsIgnoreChar(char ch) {
+bool ConditionGroupTokenizer::IsIgnoreChar(char ch) {
     return ch == ' ' || ch == '\n';
 }
 
-void ConditionGroup::ParseConditionGroup(const std::string & source, std::vector<ConditionBlock> &blockList, int depth)
+void ConditionGroupTokenizer::ParseConditionGroup(const std::string & source, std::vector<ConditionBlock> &blockList, int depth)
 {
     EnumConditionGroupToken oldToken = EnumConditionGroupToken::None;
     EnumConditionGroupToken newToken = oldToken;
@@ -97,7 +97,7 @@ void ConditionGroup::ParseConditionGroup(const std::string & source, std::vector
     }
 }
 
-bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
+bool ConditionGroupTokenizer::ProxyCondition(const std::string &source, bool isPrompt) {
         if (isPrompt)
         {
             printf("Start Logic Check: %s\n", source.c_str());
@@ -110,7 +110,7 @@ bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
             return  true;
     }
 
-    bool ConditionGroup::RunConditionExpression(const std::vector<ConditionBlock> &blockList, int depth, bool isPrompt) {
+    bool ConditionGroupTokenizer::RunConditionExpression(const std::vector<ConditionBlock> &blockList, int depth, bool isPrompt) {
     bool finalResult = false;
     EnumConditionGroupToken currentSymbol = EnumConditionGroupToken::None;
     for (int i = 0; i < blockList.size(); i++) {
@@ -176,7 +176,7 @@ bool ConditionGroup::ProxyCondition(const std::string &source, bool isPrompt) {
     return finalResult;
 }
 
-bool ConditionGroup::RunConditionExpression(bool isPrompt) {
+bool ConditionGroupTokenizer::RunConditionExpression(bool isPrompt) {
     if (!conditionBlocks.empty())
     {
         return RunConditionExpression(conditionBlocks, 0, isPrompt);
@@ -185,7 +185,7 @@ bool ConditionGroup::RunConditionExpression(bool isPrompt) {
     return true;
 }
 
-bool ConditionGroup::Check(const std::string& source) {
+bool ConditionGroupTokenizer::Check(const std::string& source) {
     conditionBlocks.clear();
     conditionHashSet.clear();
     ParseConditionGroup(source, conditionBlocks);
@@ -198,11 +198,11 @@ bool ConditionGroup::Check(const std::string& source) {
     return RunConditionExpression(true);
 }
 
-bool ConditionGroup::DirectCheck(const std::string &source) {
+bool ConditionGroupTokenizer::DirectCheck(const std::string &source) {
     return DirectCheckConditionGroup(source);
 }
 
-bool ConditionGroup::DirectCheckConditionGroup(const std::string &source, int depth)
+bool ConditionGroupTokenizer::DirectCheckConditionGroup(const std::string &source, int depth)
 {
     std::vector<ConditionBlock> result;
     EnumConditionGroupToken oldToken = EnumConditionGroupToken::None;
@@ -313,7 +313,7 @@ bool ConditionGroup::DirectCheckConditionGroup(const std::string &source, int de
     return finalResult;
 }
 
-bool ConditionGroup::IsConditionCmd(const ConditionBlock &cmd, int depth) {
+bool ConditionGroupTokenizer::IsConditionCmd(const ConditionBlock &cmd, int depth) {
     switch (cmd.token)
     {
         case EnumConditionGroupToken::Content:

@@ -1,11 +1,11 @@
 #include <iostream>
 #include <string>
-#include "ConditionGroup.h"
+#include "ConditionGroupTokenizer.h"
 
 using namespace std;
 
 int main() {
-    ConditionGroup obj;
+    ConditionGroupTokenizer obj;
     // string source = "(((false && true)|| false) && true) && (true || false)";
     // string source = "(((false1 || true2)|| false3) && true4) ||(true5 && false6)";
     // string source = "(((false1 && true2) && false3) && true4) || (true5 && false6)";

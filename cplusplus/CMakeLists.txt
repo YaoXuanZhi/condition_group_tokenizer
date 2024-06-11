@@ -3,4 +3,4 @@ project(cplusplus)
 
 set(CMAKE_CXX_STANDARD 98)
 
-add_executable(cplusplus main.cpp ConditionGroup.cpp ConditionGroup.h)
+add_executable(cplusplus main.cpp ConditionGroupTokenizer.cpp ConditionGroupTokenizer.h)

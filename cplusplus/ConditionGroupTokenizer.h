@@ -25,7 +25,7 @@ struct ConditionBlock{
     int depth;
 };
 
-class ConditionGroup {
+class ConditionGroupTokenizer {
 private:
     std::vector<ConditionBlock> conditionBlocks;
     std::unordered_set<std::string> conditionHashSet;
